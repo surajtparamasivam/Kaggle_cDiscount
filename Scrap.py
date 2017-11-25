@@ -1,17 +1,31 @@
-import io
-from skimage.data import imread
-from pymongo import MongoClient
-import time
-import bson
-import json
+import tflearn
+from tflearn.layers.conv import conv_2d, max_pool_2d
+from tflearn.layers.core import input_data, dropout, fully_connected
+from tflearn.layers.estimator import regression
+import tflearn.datasets.mnist as mnist
 
-client = MongoClient() #Makes it "good enough" for our multi-threaded use case.
-train = client.cDiscount['train']
-test = client.cDiscount['test']
+X, Y, test_x, test_y = mnist.load_data(one_hot=True)
+print(X.shape)
+X = X.reshape([-1, 28, 28, 1])
+print(X.shape)
+test_x = test_x.reshape([-1, 28, 28, 1])
+print(test_x.shape)
+convnet = input_data(shape=[None, 28, 28, 1], name='input')
 
-data=train.find_one({'_id':6000})
-img = imread(io.BytesIO(data['imgs'][0]['picture']))
-label = data['category_id']
-print(label)
-print(img)
+convnet = conv_2d(convnet, 32, 2, activation='relu')
+convnet = max_pool_2d(convnet, 2)
 
+convnet = conv_2d(convnet, 64, 2, activation='relu')
+convnet = max_pool_2d(convnet, 2)
+
+convnet = fully_connected(convnet, 1024, activation='relu')
+convnet = dropout(convnet, 0.8)
+
+convnet = fully_connected(convnet, 10, activation='softmax')
+convnet = regression(convnet, optimizer='adam', learning_rate=0.01, loss='categorical_crossentropy', name='targets')
+
+model = tflearn.DNN(convnet)
+model.fit({'input': X}, {'targets': Y}, n_epoch=10, validation_set=({'input': test_x}, {'targets': test_y}),
+    snapshot_step=500, show_metric=True, run_id='mnist')
+print(convnet.shape)
+print(model.shape)

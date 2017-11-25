@@ -11,11 +11,10 @@ from sklearn import preprocessing
 # Any results you write to the current directory are saved as output.
 
 # Simple data processing
-data = bson.decode_file_iter(open('Input/train.bson', 'rb'))
+data = bson.decode_file_iter(open('Input/train_example.bson', 'rb'))
 # read bson file into pandas DataFrame
-with open('Input/train.bson','rb') as b:
+with open('Input/train_example.bson','rb') as b:
     df = pd.DataFrame(bson.decode_all(b.read()))
-
 #Get shape of first image
 for e, pic in enumerate(df['imgs'][0]):
         picture = imread(io.BytesIO(pic['picture']))
@@ -55,13 +54,15 @@ Y_=le.transform(Y)
 print(len(le.classes_))
 
 import tensorflow as tf
-fc=[tf.feature_column.numeric_column("x",shape=[97200])]
-classifier=tf.estimator.DNNClassifier(feature_columns=fc,hidden_units=[1024,512,1024],n_classes=36)
+fc=[tf.feature_column.numeric_column("x",shape=[2])]
+classifier=tf.estimator.DNNClassifier(feature_columns=fc,hidden_units=[1000,512,36],n_classes=36,optimizer='SGD',activation_fn=tf.nn.relu,dropout=0.5)
 train_input_fn=tf.estimator.inputs.numpy_input_fn(x={"x":np.array(X_images)},y=np.array(Y_),shuffle=True)
+# classifier=tf.estimator.DNNLinearCombinedRegressor(linear_feature_columns=fc,dnn_feature_columns=fc,dnn_hidden_units=[10,20,10])
 
- 
 classifier.train(input_fn=train_input_fn,steps=10000)
 
 
 accuracy_score=classifier.evaluate(input_fn=train_input_fn)["accuracy"]
 print("\n Test Accuracy: {0:f} \n" .format(accuracy_score))
+
+
