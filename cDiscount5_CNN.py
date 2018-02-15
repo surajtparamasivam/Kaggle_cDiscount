@@ -11,7 +11,7 @@ from six.moves import range
 
 image_size=180
 num_labels=36
-num_channels=1
+num_channels=3
 
 # Simple data processing
 data = bson.decode_file_iter(open('input/train_example.bson', 'rb'))
@@ -29,6 +29,26 @@ X_ids = np.zeros((n,1)).astype(int)
 Y = df['category_id']
 X_images = np.zeros((n,pix_x,pix_y,rgb)) #m images are 180 by 180 by 3
 
+# Simple data processing
+data1 = bson.decode_file_iter(open('input/test.bson', 'rb'))
+# read bson file into pandas DataFrame
+with open('input/test.bson','rb') as b:
+    df1 = pd.DataFrame(bson.decode_all(b.read()))
+
+#Get shape of first image
+for e, pic in enumerate(df1['imgs'][0]):
+        picture = imread(io.BytesIO(pic['picture']))
+        pix_x,pix_y,rgb = picture.shape
+
+n = len(df1.index) #cols of data in train set
+X_ids1 = np.zeros((n,1)).astype(int)
+Y1 = df1['category_id']
+X_images1 = np.zeros((n,pix_x,pix_y,rgb)) #m images are 180 by 180 by 3
+
+
+
+
+
 print("Examples:", n)
 print("Dimensions of Y: ",Y.shape)
 print("Dimensions of X_images: ",X_images.shape)
@@ -42,10 +62,10 @@ def reformat(dataset,labels):
     return dataset,labels
 train_dataset,train_labels=reformat(X_images,Y)
 # valid_dataset,valid_labels=reformat(valid_dataset,valid_labels)
-# test_dataset,test_labels=reformat(test_dataset,test_labels)
+test_dataset,test_labels=reformat(X_images1,Y1)
 print('training set',train_dataset.shape,train_labels.shape)
 # print('validation set',valid_dataset.shape,valid_labels.shape)
-# print('test set',test_dataset.shape,test_labels.shape)
+print('test set',test_dataset.shape,test_labels.shape)
 #
 #
 def accuracy(predictions,labels):
@@ -61,7 +81,7 @@ with graph.as_default():
     tf_train_dataset=tf.placeholder(tf.float32,shape=(batch_size,image_size,image_size,num_channels))
     tf_train_labels=tf.placeholder(tf.float32,shape=(batch_size,num_labels))
     # tf_valid_dataset=tf.constant(valid_dataset)
-    # tf_test_dataset=tf.constant(test_dataset)
+    tf_test_dataset=tf.constant(test_dataset)
 
     layer1_weights=tf.Variable(tf.truncated_normal([patch_size,patch_size,num_channels,depth],stddev=0.1))
     layer1_biases=tf.Variable(tf.zeros([depth]))
@@ -89,7 +109,7 @@ with graph.as_default():
 
     train_prediction=tf.nn.softmax(logits)
     # valid_prediction=tf.nn.softmax(model(tf_valid_dataset))
-    # test_prediction=tf.nn.softmax(model(tf_test_dataset))
+    test_prediction=tf.nn.softmax(model(tf_test_dataset))
 
 num_steps=1001
 
@@ -106,5 +126,5 @@ with tf.Session(graph=graph) as sess:
             print('minibatch loss at step %d:%f'%(step,1))
             print('minibatch accuracy:%.1f%%'%accuracy(predictions,batch_labels))
             # print('validation accuracy:%.1f%%'%accuracy(valid_prediction.eval(),valid_labels))
-            # print('test accuracy:%.1f%%'%accuracy(test_prediction.eval(),test_labels))
+            print('test accuracy:%.1f%%'%accuracy(test_prediction.eval(),test_labels))
             # #test
